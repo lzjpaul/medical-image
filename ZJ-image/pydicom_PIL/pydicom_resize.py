@@ -91,8 +91,13 @@ def get_PIL_image(dataset):
     else:
         print dataset.WindowWidth
         print dataset.WindowCenter
-        image = get_LUT_value(dataset.pixel_array, int(dataset.WindowWidth[0]),
+        print type(dataset.WindowWidth)
+        if type(dataset.WindowWidth) is dicom.multival.MultiValue:
+            image = get_LUT_value(dataset.pixel_array, int(dataset.WindowWidth[0]),
                               int(dataset.WindowCenter[0]))
+        else:
+            image = get_LUT_value(dataset.pixel_array, int(dataset.WindowWidth),
+                              int(dataset.WindowCenter))
         # Convert mode to L since LUT has only 256 values:
         #   http://www.pythonware.com/library/pil/handbook/image.htm
         im = PIL.Image.fromarray(np.uint8(image)).convert('L')
@@ -148,8 +153,8 @@ if __name__ == '__main__':
     for dirName, subdirList, fileList in os.walk(PathDicom):
         for filename in fileList:
             if ".dcm" in filename.lower():  # check whether the file's DICOM
-		print dirName
-		print filename
+	#	print dirName
+	#	print filename
                 lstFilesDCM.append(os.path.join(dirName,filename))
                 lstDirs.append(dirName)
                 lstFileName.append(filename)
@@ -171,14 +176,19 @@ if __name__ == '__main__':
         print "pixels asarray shape: ", np.asarray(pixels).shape
         pixels_array = np.asarray(pixels)
         print "i: ", i
+        print "lstDirs[i]: ", lstDirs[i]
         transform_dir = lstDirs[i].replace("raw", "resize" + str(resize_size))
         print "transform_dir: ", transform_dir
-        os.makedirs(transform_dir)
+        if not os.path.exists(transform_dir):
+            os.makedirs(transform_dir)
         if pixels_array.dtype == np.int64:
-            np.savetxt(transform_dir + lstFileName[i][: -4] + "_pixels_array.csv", pixels_array, "%d", ",")
+            np.savetxt(transform_dir + "/" + lstFileName[i][: -4] + ".csv", pixels_array, "%d", ",")
+            print "save dir: ", transform_dir + "/" + lstFileName[i][: -4] + ".csv"
         else:
             print "not int64"
-        im.save(transform_Dir + lstFileName[i][: -4] + ".png")
+        # im.save(transform_dir + "/" + lstFileName[i][: -4] + ".png")
+        # print "save dir: ", transform_dir + "/" + lstFileName[i][: -4] + ".png"
         mean_vector = mean_vector + pixels_array
     mean_vector = mean_vector / float(len(lstFilesDCM))
     np.savetxt(args.rawdatadir.replace("raw", "resize" + str(resize_size)) + "/mean.csv", mean_vector, "%5f", ",")
+    print "save dir: ", args.rawdatadir.replace("raw", "resize" + str(resize_size)) + "/mean.csv"
