@@ -142,6 +142,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Resize dcm image')
     parser.add_argument('rawdatadir', type=str, help='raw data directory')
     # parser.add_argument('outputdir', type=str, help='outputdir')
+    parser.add_argument('img_list_file', type=str, help='special image (i.e. PA) list file')
     parser.add_argument('resize', type=int, help='resize size')
     # parser.add_argument('--use_gpu', action='store_true')
     args = parser.parse_args()
@@ -161,7 +162,20 @@ if __name__ == '__main__':
 
     resize_size = args.resize
     mean_vector = np.zeros([resize_size, resize_size])
-    # calculate sum -- mean
+    
+    line_no = 0
+    imglist = dict()
+    for line in open(args.img_list_file, 'r'):
+        item = line.split(' ')
+        img_path = item[0]
+        imglist["./raw/" + img_path] = line_no
+        # print "dict ./raw/ + img_path: ", "./raw/" + img_path
+        # print "line_no: ", line_no
+        line_no = line_no + 1
+    print "imglist: ", imglist
+     
+    PA_number = 0
+
     for i in range(len(lstFilesDCM)):
         ds = dicom.read_file(lstFilesDCM[i])
         print "processing: ", lstFilesDCM[i]
@@ -188,7 +202,12 @@ if __name__ == '__main__':
             print "not int64"
         # im.save(transform_dir + "/" + lstFileName[i][: -4] + ".png")
         # print "save dir: ", transform_dir + "/" + lstFileName[i][: -4] + ".png"
-        mean_vector = mean_vector + pixels_array
-    mean_vector = mean_vector / float(len(lstFilesDCM))
+        if lstFilesDCM[i] in imglist:
+            PA_number = PA_number + 1
+            mean_vector = mean_vector + pixels_array
+            print "PA image: ", lstFilesDCM[i]
+    
+    print "PA_number: ", PA_number    
+    mean_vector = mean_vector / float(PA_number)
     np.savetxt(args.rawdatadir.replace("raw", "resize" + str(resize_size)) + "/mean.csv", mean_vector, "%5f", ",")
     print "save dir: ", args.rawdatadir.replace("raw", "resize" + str(resize_size)) + "/mean.csv"
